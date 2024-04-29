@@ -1,0 +1,290 @@
+---
+output: 
+  pdf_document:
+    number_sections: true
+geometry: margin=1in
+---
+
+\noindent{\large\bfseries Matthew Bolding} 
+
+\vspace{-5pt} \noindent{\large\bfseries Dr. Nelis Potgieter}
+
+\vspace{-5pt} \noindent{\large\bfseries MATH 40883–015}
+
+\vspace{-5pt} \noindent{\large\bfseries 17:00 CDT, March 18\textsuperscript{th}, 2022}
+
+\begin{center}
+    \LARGE\bfseries Predictive Modeling: Project 1
+\end{center}
+
+\vspace{-5pt}
+\small
+\section{Visualizing Data}
+Before visualizing any data, we must first read the data from a file.
+
+```{r, read_file}
+survey <- read.table("am_com_survey.txt", header = T, sep = ",")
+```
+
+We may now begin to examine and visualize the relationships and interactions between predictors and the output variable. \texttt{log\_inc}. However, before visualizing any data, determining the correlations between variables, via `round(cor(survey), 2)`, might provide an education starting point when determining which variables to display graphically.
+
+```{r, cor_matrix, echo=FALSE}
+round(cor(survey), 2)
+```
+
+\subsection{Visualizing Two Predictors}
+Let us first visualize predictor pairs \texttt{gender} and \texttt{hrs\_work} as well as \texttt{age} and \texttt{married}.
+```{r, show1, eval=FALSE}
+female.hrs_work <- survey[which(survey$gender == 1), ]$hrs_work
+male.hrs_work <- survey[which(survey$gender == 0), ]$hrs_work
+boxplot(female.hrs_work, male.hrs_work,
+        ylab = "Hours Worked",
+        xlab = "Gender",
+        names = c("Female", "Male"),
+        main = "Gender and Hours Worked")
+```
+
+
+
+```{r, pred_pred_plots, fig.show="hold", out.width="50%", echo=FALSE}
+female.hrs_work <- survey[which(survey$gender == 1), ]$hrs_work
+male.hrs_work <- survey[which(survey$gender == 0), ]$hrs_work
+boxplot(female.hrs_work, male.hrs_work,
+        ylab = "Hours Worked",
+        xlab = "Gender",
+        names = c("Female", "Male"),
+        main = "Gender and Hours Worked")
+
+unmarried <- survey[which(survey$married == 1), ]$age
+married <- survey[which(survey$married == 0), ]$age
+boxplot(married, unmarried,
+        ylab = "Age",
+        xlab = "Marital Status",
+        names = c("Married", "Unmarried"),
+        main = "Age and Martial Status")
+```
+
+A similar block is used to visualize \texttt{age} and \texttt{married} but is not shown for brevity.
+
+Note that \texttt{gender} and \texttt{hrs\_work} have a correlation high enough (`r round(cor(survey$gender, survey$hrs_work), 2)`) so that there might be some separation between the two variables. Similarly, \texttt{age} and \texttt{married} have a relatively high correlation (`r round(cor(survey$age, survey$married), 2)`). 
+
+Although \texttt{gender} and \texttt{married} are predictors with the highest correlation (`r round(cor(survey$gender, survey$married), 2)`), we will not display them since their graph---a pie chart or bar graph---shows little information in actuality. These predictors are further discussed in **Section 2---Exploring Relationships**.
+
+\subsection{Visualizing a Predictor and \texttt{log\_inc}}
+
+```{r, pred_out_plots, fig.show="hold", out.width="50%", echo=FALSE}
+# hrs_work & log_inc
+plot(survey$hrs_work, survey$log_inc,
+     main = 'Hours Worked vs. Log. Income',
+     xlab = 'Hours Worked', ylab = 'Log. Income',
+     xlim = range(survey$hrs_work), ylim = range(survey$log_inc))
+
+# age & log_inc
+plot(survey$age, survey$log_inc,
+     main = 'Age vs. Log. Income',
+     xlab = 'Age', ylab = 'Log. Income',
+     xlim = range(survey$age), ylim = range(survey$log_inc))
+
+# edu & log_inc
+college <- survey[which(survey$edu == 0), ]$log_inc
+high_school <- survey[which(survey$edu == 1), ]$log_inc
+boxplot(college, high_school,
+        ylab = "Log. Income",
+        xlab = "Education Level",
+        names = c("College", "High School"),
+        main = "Education Level and Log. Income")
+
+# gender & log_inc
+female.log_inc <- survey[which(survey$gender == 1), ]$log_inc
+male.log_inc <- survey[which(survey$gender == 0), ]$log_inc
+boxplot(female.log_inc, male.log_inc,
+        ylab = "Log. Income",
+        xlab = "Gender",
+        names = c("Female", "Male"),
+        main = "Gender and Log. Income")
+```
+In the above graphs, chosen based on the high(-ish) correlation between the predictor and the output variable, we see some form of a linear relationship with the output variable. These plots were constructed with a simple \texttt{plot()} function; code can be found in the \texttt{.rmd} file or standalone `R` file.
+
+\section{Exploring Relationships}
+
+Consider the plots in **Section 1.2**. Observe that they all exhibit some linear relationship to the output variable, no matter how weak. These predictors, therefore, would likely contribute well.
+
+Recall the explicitly mentioned correlations in **Section 1---Visualizing Data**. As we saw in the above section, some predictors, like \texttt{gender} and \texttt{hrs\_work} as well as \texttt{age} and \texttt{married} have strong enough correlations to be of concern. 
+
+These correlations might present an issue when constructing a model. Determining the exact effect a predictor has on the output variable might be difficult---separating the effects of two such predictors that carry a relatively high correlation presents a hefty challenge. Colinearlity---caused by a high correlation---can increase the standard error of predicted coefficients. Therefore, it might be wise to introduce an interation term to better capture the effects the two predictors have on the output variable.
+
+Referencing the *Gender and Hours Worked* graph above, the box plot visually shows the aforementioned separation, motivated by the moderately high correlation. The same can be said for the \texttt{age} and \texttt{married} predictors but to a lesser extent---their box plots still have some overlap but significantly less than the previous pair of predictors. So, if we are to construct a linear model contains both either of these pairs of preditors, an interaction term might increase the model's accuracy.
+
+Visualizing \texttt{gender} and \texttt{married} would show that there is not a single observation of an unmarried woman. In fact, most observations are of married females. (This can be verified by counting the number of rows for all combinations of \texttt{gender} and \texttt{married} using the \texttt{which} command.) This is an interesting characteristic of the data set, though I'm unsure how it would affect the resulting models. Perhaps predicting the income for an unmarried female would be a leverage value.
+
+<!---
+```{r, male_female, results = 'hold'}
+nrow(survey[which(survey$married == 0 & survey$gender == 1), ]) ## unmarried females
+nrow(survey[which(survey$married == 1 & survey$gender == 1), ]) ## married females
+nrow(survey[which(survey$married == 0 & survey$gender == 0), ]) ## unmarried males
+nrow(survey[which(survey$married == 1 & survey$gender == 0), ]) ## married males
+```
+--->
+
+\section{Single Qualitative and Quantitative Models}
+
+\subsection{\texttt{hrs\_work} and \texttt{gender}}
+
+These two predictors make good candidates for a linear regression model with a single qualitative and quantitative input variable. Not only does \texttt{hrs\_work} have the highest correlation to the output variable, but this input variable and \texttt{gender} have a rather high correlation, as we discussed earlier. \texttt{gender} has some correlation to the \texttt{log\_inc}, too. As such, we see below that the interaction term between the two variables is statistically significant.
+
+To train the model, we run the below command. (Note: only viewing the fourth column of the coefficients from \texttt{summary} will display the p-values, and a colon between two input variables will form an interaction term.)
+```{r, hrs_work_gender_model}
+model.hrs_work.gender <- lm(log_inc ~ hrs_work + gender + hrs_work:gender, data = survey)
+summary(model.hrs_work.gender)$coefficients[,4]
+```
+
+\subsection{\texttt{age} and \texttt{edu}}
+
+The next model again includes \texttt{age} and \texttt{edu} for the same reason as above---they both have a high correlation to the output variable. (See the visualizations above.) However, the correlation between these two inputs is rather low. Consequently, after training the model, we find that the p-value of the interaction term greater than the significance level; hence, it's removed. It's not shown, but the model without the interaction term has \texttt{age}'s and \texttt{edu}'s p-values retaining their significance.
+
+```{r, age_edu_model}
+model.age.edu <- lm(log_inc ~ age + edu + age:edu, data = survey)
+summary(model.age.edu)$coefficients[,4]
+```
+
+```{r, age_edu_model_retrain, echo=FALSE}
+model.age.edu <- lm(log_inc ~ age + edu, data = survey)
+```
+
+\subsection{\texttt{age} and \texttt{married}}
+
+This choice of selecting \texttt{age} stems from its correlation to the output variable. Due to the constraints of the project, we may only pair a quantitative predictor, such as \texttt{age}, with a categorical variable. \texttt{married} has the next highest correlation to the output variable among unused categorical variables paired with \texttt{age}.
+
+```{r, age_married_model}
+model.age.married <- lm(log_inc ~ age + married + age:married, data = survey)
+summary(model.age.married)$coefficients[,4]
+```
+
+We see that the interaction term is not statistically significant, so we will discard that term from the model, which is retrained without it. (Note: after the removal of the interaction term, \texttt{married} becomes statistically insignificant!)
+
+```{r, age_married_model_retrain, echo=FALSE}
+model.age.married <- lm(log_inc ~ age + married, data = survey)
+```
+
+\section{Backwards Selection}
+
+The backwards selection process dictates that the starting point for the eventual model is the saturated one---a model using all predictors. The process further instructs us to remove the predictor with the largest p-value.
+
+```{r, backwards_model1, results = 'hold'}
+model.back.sel <- lm(log_inc ~ hrs_work + race + age + gender + time_to_work + 
+                               married + edu, data = survey)
+p_values <- summary(model.back.sel)$coefficients[ ,4]
+p_values[p_values == max(p_values)]
+```
+
+Such a predictor with the largest p-value would be \texttt{time\_to\_work}. Now, we retrain the model, like above, but without that predictor. The largest p-value of the newly-trained model is below.
+
+```{r, bwm_train, echo=FALSE}
+model.back.sel <- lm(log_inc ~ hrs_work + race + age + gender + married + edu, data = survey)
+```
+
+```{r, backwards_model2}
+p_values <- summary(model.back.sel)$coefficients[ ,4]
+p_values[p_values == max(p_values)]
+```
+
+Repeating this process, we remove the predictor \texttt{race}, since it has 1) the largest p-value, which is 2) greater than the significance level. Then, we retrain without \texttt{race}.
+
+```{r, backwards_model3, results = 'hold'}
+model.back.sel <- lm(log_inc ~ hrs_work + age + gender + married + edu, data = survey)
+p_values <- summary(model.back.sel)$coefficients[ ,4]
+p_values[p_values == max(p_values)]
+```
+
+Now, we do not remove the least statistically significant predictor, since all inputs variables have a p-value less than the standard significance level of $0.05$. Therefore, we have completed the backwards selection process to generate a model.
+
+\section{Estimated Prediction Equations}
+\subsection{Backwards Selection}
+```{r, backwards_model_coef, echo=FALSE, eval=FALSE, results='hide'}
+round(coef(model.back.sel), 4)
+```
+After getting the coefficients (via \texttt{round(coef(model.back.sel), 4)}, not shown for brevity), we can determine the model's prediction equation to be
+\begin{align*}
+    \widehat{\texttt{log\_inc}} &= 7.6534 + (0.0491 \times \texttt{hrs\_work}) + (0.0187 \times \texttt{age}) \\ & + (-0.4633 \times \texttt{gender}) + (0.4418 \times \texttt{married}) + (-0.5394 \times \texttt{edu}).
+\end{align*}
+
+All subsequent model equations' coefficients are queried in the same fashion. See hidden code in `project1.rmd`.
+
+\subsection{\texttt{hrs\_work} and \texttt{gender}}
+```{r, hrs_work_gender_coef, echo=FALSE, eval=FALSE, results='hide'}
+round(coef(model.hrs_work.gender), 4)
+```
+\begin{align*}
+    \widehat{\texttt{log\_inc}} = 8.4355 + (0.0486 \times \texttt{hrs\_work}) + (-0.9994 \times \texttt{gender}) + (0.0194 \times (\texttt{hrs\_work} \times \texttt{gender})).
+\end{align*}
+
+\subsection{\texttt{age} and \texttt{edu}}
+```{r, age_edu_coef, echo=FALSE, eval=FALSE, results='hide'}
+round(coef(model.age.edu), 4)
+```
+\begin{align*}
+    \widehat{\texttt{log\_inc}} = 9.4888 + (0.0265 \times \texttt{age}) + (-0.6900 \times \texttt{edu}).
+\end{align*}
+
+\subsection{\texttt{age} and \texttt{married}}
+```{r, 1_coef, echo=FALSE, eval=FALSE, results='hide'}
+round(coef(model.age.married), 4)
+```
+\begin{align*}
+    \widehat{\texttt{log\_inc}} = 8.9349 + (0.0263 \times \texttt{age}) + (0.1789 \times \texttt{married}).
+\end{align*}
+
+\subsection{Recommended Model}
+
+Adjusted $R^2$ is a good measure to determine how well a model fits the variability of the data set upon which it's trained. The adjusted $R^2$ of $\ldots$
+
+* `model.hrs_work.gender` is `r summary(model.hrs_work.gender)$adj.r.squared`,
+* `model.age.edu` is `r summary(model.age.edu)$adj.r.squared`,
+* `model.age.married` is `r summary(model.age.married)$adj.r.squared`, and
+* `model.back.sel` is `r summary(model.back.sel)$adj.r.squared`.
+
+Hence, we choose the backwards selection model, since it has the highest adjusted $R^2$ value.
+
+\section{Outliers and Leverage Values}
+
+```{r, load_mass, echo = FALSE, message=FALSE}
+library(MASS)
+```
+
+Via the below code, utilizing the \texttt{studres} and \texttt{hatvalues} commands from the \texttt{MASS} library, we can determine whether there exists leverage points and outlines.
+
+```{r, outlier_leverage, fig.show="hold", out.width="50%"}
+## Outliers
+stu.res <- studres(model.back.sel)
+plot(stu.res, ylab = "Student Residuals", main = "Student Residuals vs. Index (Outliers)")
+abline(3, 0, col="red")
+abline(0, 0, col="blue")
+abline(-3, 0, col="red")
+
+## Leverage
+hat.vals <- hatvalues(model.back.sel)
+p <- length(survey) - 1
+n <- nrow(survey)
+plot(hat.vals, ylab = "Hat Values", main = "Hat Values vs. Index (Leverage)")
+abline((p + 1)/n, 0, col="blue")
+
+```
+
+It's quite clear to see that the data set has multiple outliers and two particularly high leverage points. Outliers reside in the data set itself, being a point which is far from its predicted value. These points affect the model's adjusted $R^2$ value and RSE---adjusted $R^2$ decreases while RSE increases. Such an effect can more substantively be seen in the training process. It's possible that the outliers affect the RSE in such a way to skew the p-values for various predictors in the backwards selection phase, potentially changing the final model. Since outliers increase RSE, then a confidence interval for the intercept term, or any other coefficient, would be larger. The model's coefficients are likely are not changed drastically as a result of the outliers, since there are so few relative to the number of data points.
+
+Leverage points, especially high leverage points, in great numbers, can invalidate a regression fit, and they can have a sizable impact on any of the model's coefficients. It's worth noting that there exists a data point that's both high leverage and an outlier: observation 595. This could be a particularly problematic observation!
+
+```{r, leverage_outlier_point}
+outlier <- which(abs(stu.res) > 3)
+leverage <- which(hat.vals > 0.03)
+Reduce(intersect,list(outlier, leverage))
+```
+
+\section{Conclusion}
+Recall that the adjusted $R^2$ value of the selected model, the one obtained via backwards selection, is approximately 0.51. Although this value is at least 10% higher than the next closest model, such a value of 0.51 is not optimal by any means to make firm predictions---only half of the variability of the model can be explained! The previously mentioned outliers no doubt lower this value, so it's possible that this model could still make some meaningful predictions, should those data points be removed or otherwise ignored. Looking into the high leverage points might be wise as well.
+
+This backwards selection model is merely multiple linear regression. It's possible that some predictors might produce better results if viewed in a polynomial fashion. For instance, the *Age vs. Log. Income* graph shows what appears to resemble a square root curve---one that increases but then rapidly slows.
+
+The bottom line: in its current state, this model could make *some* predictions of quality but there will certainly be some poor predictions---recall how many total leverage points existed! However, given the nature of the data set, that being taken from a real life scenario, this model performs adequately enough, in my opinion, to give some insight into predicting income on a logarithmic scale.
+
+Of the input variables, \texttt{hrs\_work} and \texttt{edu} have a large impact on predicting the output variable. Generally speaking, the more hours an individual works, the higher they can expect their income to be. This suggestion corresponds to the correlation of \texttt{hrs\_work} and \texttt{log\_inc}---a positive one. We also saw that having higher education has an effect on one's income. We saw in an above graph that the higher one's education is, i.e., college or higher, they have a higher income. Again, this statement can be confirmed by looking at the correlation of \texttt{edu} and\texttt{edu}---a negative one---since a 1 for education actually trends with lower income individuals.
